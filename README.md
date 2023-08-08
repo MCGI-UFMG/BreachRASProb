@@ -3,6 +3,7 @@ BreachRASProb is an open-source repository to work with dam breach probabilistic
 
 Introduction
 ------------
+BreachRASProb is an open-source repository for work with dam breach probabilistic flood inundation mapping using Python and HEC-RAS 2D. This repository applies HEC-RASController to automate HEC-RAS 2D considering breach parameters uncertanties in order to help users apply Monte Carlo Simulations, sensibility analysis and probabilistic flood inundation mapping.
 
 Installation
 ------------
