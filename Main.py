@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Feb  2 22:12:05 2021
-
-@author: Rodrigo & Alexandre
+@author: Rodrigo Perdigão
 """
 
-#IMPORTANDO BIBLIOTECAS
+#Import Libraries
 
 import win32com.client
 import numpy as np
@@ -13,76 +11,61 @@ import h5py
 import pandas as pd
 from scipy.stats import laplace_asymmetric
 import geopandas
-import time
 
+# Creating empty lists and dataframes
+poutflow=[] #Peak outflow list
+depth_max=pd.DataFrame(columns=list(range(24219))) # Depth max in each cell and each simulation
+depth_10=pd.DataFrame(columns=list(range(24219))) # 0 (dry) or 1 (wet) value in each cell for 10 minutes after dam breach
+depth_20=pd.DataFrame(columns=list(range(24219))) # 0 (dry) or 1 (wet) value in each cell for 20 minutes after dam breach
+depth_30=pd.DataFrame(columns=list(range(24219))) # 0 (dry) or 1 (wet) value in each cell for 30 minutes after dam breach
+depth_40=pd.DataFrame(columns=list(range(24219))) # 0 (dry) or 1 (wet) value in each cell for 40 minutes after dam breach
+depth_50=pd.DataFrame(columns=list(range(24219))) # 0 (dry) or 1 (wet) value in each cell for 50 minutes after dam breach
+depth_60=pd.DataFrame(columns=list(range(24219))) # 0 (dry) or 1 (wet) value in each cell for 60 minutes after dam breach
+depth_90=pd.DataFrame(columns=list(range(24219))) # 0 (dry) or 1 (wet) value in each cell for 90 minutes after dam breach
+depth_120=pd.DataFrame(columns=list(range(24219))) # 0 (dry) or 1 (wet) value in each cell for 120 minutes after dam breach
+depth_150=pd.DataFrame(columns=list(range(24219))) # 0 (dry) or 1 (wet) value in each cell for 150 minutes after dam breach
+depth_180=pd.DataFrame(columns=list(range(24219))) # 0 (dry) or 1 (wet) value in each cell for 180 minutes after dam breach
 
-#DECLARANDO LISTAS DOS RESULTADOS EM CADA SIMULAÇÃO
-tb_list=[] #VETOR DO TEMPO DE BASE
-tp_list=[] #VETOR DO TEMPO DE PICO
-qp_list=[] #VETOR DA VAZÃO DE PICO
+#Breach Parameters used in each Monte Carlo Simulation
+fwidth_samples=[] # Final Breach Width 
+btelev_samples=[] # Botton Breach Elevation 
+zleft_samples=[] # Breach Left Slope
+zright_samples=[] # Breach Right Slope 
+ftime_samples=[] # Breach Formation Time
 
-#DECLARANDO LISTAS DOS RESULTADOS COMPLETOS EM CADA SIMULAÇÃO
-area_max_list=[] #VETOR DA AREA DA ENVOLTORIA MAXIMA
-tproces_list=[] #VETOR DE TEMPO DE PROCESSAMENTO
-df_depth_max=pd.DataFrame(columns=list(range(24219)))
-df_depth_10=pd.DataFrame(columns=list(range(24219)))
-df_depth_20=pd.DataFrame(columns=list(range(24219)))
-df_depth_30=pd.DataFrame(columns=list(range(24219)))
-df_depth_40=pd.DataFrame(columns=list(range(24219)))
-df_depth_50=pd.DataFrame(columns=list(range(24219)))
-df_depth_60=pd.DataFrame(columns=list(range(24219)))
-df_depth_90=pd.DataFrame(columns=list(range(24219)))
-df_depth_120=pd.DataFrame(columns=list(range(24219)))
-df_depth_150=pd.DataFrame(columns=list(range(24219)))
-df_depth_180=pd.DataFrame(columns=list(range(24219)))
+bh = 61 # Breach Height
+cl = 360 # Crest Length
+celev = 272 # Crest Elevation
+relev = 206.03 # Rock Bed Elevation
 
-
-
-
-
-
-
-#PARÂMETROS DE BRECHA AMOSTRADOS
-LF_list=[] #VETOR DE LARGURA FINAL
-EL_FUN_list=[] #VETOR DE ELEVAÇÃO DO FUNDO 
-Zesq_list=[] #VETOR DE INCLINAÇÃO LATERAL DA BRECHA
-Zdir_list=[] #VETOR DE INCLINAÇÃO LATERAL DA BRECHA
-TF_list=[] #VETOR DE TEMPO DE FORMAÇÃO
-
-HB = 61
-Lcrista = 360
-El_crista = 272
-El_rocha = 206.03
-
-n=8000 #ESTABELECENDO N° DE REPETIÇÃO DO MONTE CARLO
+n=2000 #ESTABELECENDO N° DE REPETIÇÃO DO MONTE CARLO
 
 for i in range(n):
-    start = time.time()
-    #ESTIMANDO PARÂMETROS COM BASE NA DIST. NORMAL 
-
-    X = El_crista - laplace_asymmetric.rvs(loc=1, scale=0.06301609, kappa=0.69327604)*HB
-    while X < El_rocha:
-        X = El_crista - laplace_asymmetric.rvs(loc=1, scale=0.06301609, kappa=0.69327604)*HB
+    #Estimating Breach Parameters based in Da Silva and Eleutério (2023) https://doi.org/10.1111/jfr3.12900
+    # Crest Elevation
+    X = celev - laplace_asymmetric.rvs(loc=1, scale=0.06301609, kappa=0.69327604)*bh
+    while X < relev:
+        X = celev - laplace_asymmetric.rvs(loc=1, scale=0.06301609, kappa=0.69327604)*bh
     else: 
-        EL_FUN = X
-        
-    Y = np.random.gamma(shape=0.2568,scale=1/1.6397)*Lcrista 
-    while Y > Lcrista:
-        Y = np.random.gamma(shape=0.2568,scale=1/1.6397)*Lcrista 
+        btelev = X
+    # Final Breaqch Width     
+    Y = np.random.gamma(shape=0.2568,scale=1/1.6397)*cl 
+    while Y > cl:
+        Y = np.random.gamma(shape=0.2568,scale=1/1.6397)*cl
     else:
-        LF = Y
+        fwidth = Y
         
-    ZE=np.random.gamma(shape=0.4974,scale=1/0.2281)
-    ZD=np.random.gamma(shape=0.4974,scale=1/0.2281)
-    EL_topo = LF+ZE*(El_crista-EL_FUN)+ZD*(El_crista-EL_FUN)
+    zleft=np.random.gamma(shape=0.4974,scale=1/0.2281)
+    zright=np.random.gamma(shape=0.4974,scale=1/0.2281)
+    topelev = fwidth+zleft*(celev-btelev)+zright*(celev-btelev)
     
-    while EL_topo > 1.1*Lcrista:
-        ZE=np.random.gamma(shape=0.4974,scale=1/0.2281)
-        ZD=np.random.gamma(shape=0.4974,scale=1/0.2281)
-        EL_topo = LF+ZE*(El_crista-EL_FUN)+ZD*(El_crista-EL_FUN)
+    while topelev > 1.1*celev:
+        zleft=np.random.gamma(shape=0.4974,scale=1/0.2281)
+        zright=np.random.gamma(shape=0.4974,scale=1/0.2281)
+        topelev = btelev+zleft*(celev-btelev)+zright*(celev-btelev)
     else:
-        Z_esq = ZE
-        Z_dir = ZD
+        Z_esq = zleft
+        Z_dir = zright
         
     TF=np.random.gamma(shape=1.5932,scale=1/1.5007)
     
